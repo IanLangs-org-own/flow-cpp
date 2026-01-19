@@ -1,4 +1,3 @@
-#include <any>
 int main()
 {
     //many any
@@ -6,4 +5,5 @@ int main()
         many any
         any
     */
+    return 0;
 }
