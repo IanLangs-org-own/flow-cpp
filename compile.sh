@@ -4,7 +4,7 @@ set -e
 
 INCLUDE_DIR="./include"
 SRC_DIR="./src"
-OUTPUT="tc3p"
+OUTPUT="ifc"
 
 echo "Compilando C++..."
 

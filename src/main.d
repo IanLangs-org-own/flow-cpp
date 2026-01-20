@@ -11,16 +11,17 @@ extern(C) void free_transpile(const(char)* s);
 extern(C) const(char)* replaceExt(const(char)* path, const(char)* newExt);
 extern(C) void free_replaceExt(const(char)* s);
 
-string version_c3p = "0.1.2";
+string version_c3p = "0.9.0";
 
 void main(string[] args) {
     if (args.length < 2) {
-        writeln("Uso: tc3p archivo1.c3p [archivo2.c3p ...]");
+        writeln("Uso: tc3p archivo1.fcpp [archivo2.fcpp ...]");
+        writeln("Extensión de archivos de entrada: .fcpp (recomendada), .fcp, .fcc");
         return;
     }
 
     if (args[1] == "-v" || args[1] == "--version") {
-        writeln("c+++ version = ", version_c3p);
+        writeln("ifc version = ", version_c3p);
         return;
     }
 
@@ -35,7 +36,6 @@ void main(string[] args) {
             continue;
         }
 
-        // ⚠️ SIEMPRE toStringz
         const(char)* output_c = transpile_c(toStringz(code));
         string result = output_c[0 .. strlen(output_c)].idup;
         free_transpile(output_c);
