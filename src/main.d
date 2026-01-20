@@ -11,7 +11,7 @@ extern(C) void free_transpile(const(char)* s);
 extern(C) const(char)* replaceExt(const(char)* path, const(char)* newExt);
 extern(C) void free_replaceExt(const(char)* s);
 
-string version_c3p = "0.9.0";
+string version_c3p = "1.2.0";
 
 void main(string[] args) {
     if (args.length < 2) {
