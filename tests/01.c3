@@ -1,8 +1,7 @@
-#include <string>
 int main() {
     any x = 1;
     auto y = [x]:long long:;
-    std::string z = "any many";
-    std::string many = "";
+    str z = "any many";
+    str many = "";
     return 0;
 }

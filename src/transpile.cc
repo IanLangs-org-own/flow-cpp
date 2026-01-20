@@ -6,6 +6,7 @@ std::string transpile(const std::string& code) {
     size_t i = 0;
     size_t n = code.size();
     bool any_in_code = false;
+    bool str_in_code = false;
     bool in_string = false;
     bool in_char = false;
     bool in_line_comment = false;
@@ -83,10 +84,10 @@ std::string transpile(const std::string& code) {
                     continue;
                 }
             }
-            else if (code.compare(i, 3, "any") == 0) {
+            else if (!(code.compare(i, 3, "any"))) {
                 
                 char prev = (i > 0) ? code[i - 1] : '\0';
-                char next = (i + 3 < n) ? code[i + 3] : '\0';
+                char next = ((i + 3) < n) ? code[i + 3] : '\0';
                 bool in_other_scope = (i >= 2 && code[i-2] == ':' && code[i-1] == ':');
 
                 auto isIdent = [](char c) {
@@ -96,6 +97,23 @@ std::string transpile(const std::string& code) {
                 if (!isIdent(prev) && !isIdent(next) && !in_other_scope) {
                     out += "std::any";
                     any_in_code = true;
+                    i += 3;
+                    continue;
+                }
+            }
+            else if (!(code.compare(i, 3, "str"))) {
+
+                char prev = (i > 0) ? code[i - 1] : '\0';
+                char next = ((i + 3) < n) ? code[i + 3] : '\0';
+                bool in_other_scope = (i >= 2 && code[i-2] == ':' && code[i-1] == ':');
+
+                auto isIdent = [](char c) {
+                    return std::isalnum(c) || c == '_';
+                };
+
+                if (!isIdent(prev) && !isIdent(next) && !in_other_scope) {
+                    out += "std::string";
+                    str_in_code = true;
                     i += 3;
                     continue;
                 }
@@ -113,6 +131,16 @@ std::string transpile(const std::string& code) {
             out.insert(nl, "#include <any>\n");
         } else {
             out = "#include <any>\n" + out; 
+        }
+    }
+    if ((out.find("#include <string>") == std::string::npos && out.find("#include <iostream>") == std::string::npos) && str_in_code) {
+        size_t last_include = out.rfind("#include");
+        if (last_include != std::string::npos) {
+            size_t nl = out.find('\n', last_include);
+            if (nl != std::string::npos) nl++; 
+            out.insert(nl, "#include <string>\n");
+        } else {
+            out = "#include <string>\n" + out; 
         }
     }
     return out;
