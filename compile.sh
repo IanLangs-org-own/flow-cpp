@@ -17,3 +17,5 @@ echo "Compilando D y enlazando con C++..."
 gdc "$SRC_DIR/main.d" transpile.o tD.o replaceExt.o -o "$OUTPUT" -lstdc++
 
 echo "Compilación finalizada. Ejecutable: ./$OUTPUT"
+
+rm *.o
