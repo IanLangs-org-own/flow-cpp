@@ -1,8 +1,26 @@
-**
-!*.*
-!**/
+# Ignorar carpetas de compilación y binarios
+/ifc               # si el ejecutable se genera localmente
+
+# Archivos temporales y de logs
+*.log
+*.out
 *.exe
 *.app
-*.out
 *.o
-*.log
+*.so
+*.a
+
+# Carpetas de IDEs y OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+*.bak
+
+# Excepciones: siempre trackear fuentes y scripts
+!*.nim
+!*.fcpp
+!*.sh
+!LICENSE.txt
+!src/**
+!tests/**

@@ -1,52 +1,87 @@
+import os, strutils, sequtils, osproc
+import gen_files, compile
 import transpiler
-import os
-import re
-import strformat
-let argc: int = paramCount()
-proc echoORstderr(cond: bool, text:string) =
-    if cond: echo text
-    else: stderr.write(text)
 
-if argc == 0 or (argc == 1 and commandLineParams()[0] in @["-h", "--help"]):
-    echoORstderr(argc == 0,"Uso: ifc file.fcpp [file2.fcpp ...]\nExtensión de archivos de entrada: .fcpp (recomendada), .fcp, .fcc")
-    quit(if argc == 0: 1 else: 0)
+proc printHelp() =
+  echo """
+Uso: ifc archivo1.fcpp [archivo2.fcpp ...] [flags g++]
 
-if argc == 1 and commandLineParams()[0] in @["-v", "--version"]:
-    echo "ifc version 1.6\nflow c++ version 1.2"
-    quit(0)
+Opciones:
+  -o<nombre>     Especifica el nombre del binario de salida (por defecto: app)
+  -cpp<nombre>   Solo genera el archivo .cpp con el nombre indicado, no compila ni borra caches
+  -c<nombre>     Genera .cpp y compila a objeto .o, no linkea ni borra otros objetos
 
-func replaceExt(name: string): string =
-    replace(name, re"\.fcpp$|\.fcc$|\.fcp$", ".cpp")
+Ejemplos:
+  ifc main.fcpp -O2 -o miApp        # flujo normal: compila y linkea a dist/miApp
+  ifc test.fcpp -cppTest            # solo genera dist/cpp/Test.cpp
+  ifc lib.fcpp -cLib                # genera dist/cpp/Lib.cpp y dist/obj/Lib.o
+"""
 
-type
-    FileType = object
-        Filename: string
-        content: string
+when isMainModule:
+  if paramCount() == 0:
+    printHelp
+    quit(QuitFailure)
 
-func File(file: string): FileType =
-    return FileType(Filename: file, content: "")
+  let args = commandLineParams()
 
-func File(file: string, cont: string): FileType =
-    return FileType(Filename: file, content: cont)
+  # --- Modo solo cpp: -cppX ---
+  if paramCount() == 2 and args[1].startsWith("-cpp"):
+    let f = args[1]
+    if f.len > 4:
+      let outName = f[4..^1]  # -cppX → X
+      let src = readFile(args[0])
+      let cpp = transpile(src)
+      writeFile(cacheDir / (outName & ".cpp"), cpp)
+      quit(0)
 
-proc write(o: FileType) =
-    writeFile(o.Filename, o.content)
+  # --- Modo solo compilar a objeto: -cX ---
+  if paramCount() == 2 and args[1].startsWith("-c"):
+    let f = args[1]
+    if f.len > 2:
+      let outName = f[2..^1]  # -cX → X
+      let src = readFile(args[0])
+      let cpp = transpile(src)
+      let cppPath = genCppFile(outName, cpp)
+      let obj = objDir / (outName & ".o")
+      let cmd = @["g++", "-c", cppPath, "-o", obj]
+      let res = execCmd(cmd.join(" "))
+      if res != 0:
+        quit("Error compilando " & cppPath, QuitFailure)
+      quit(0)
 
-proc read(o: var FileType) =
-    o.content = readFile(o.Filename)
+  # --- Flujo normal ---
+  if not dirExists(distDir):
+    createDir(distDir)
 
-for arg in commandLineParams():
-    if arg[0] == '-':
-        stderr.write(fmt"Eror: unknown option {arg}")
-        quit(1)
+  # Limpiar carpetas al inicio
+  initDirs()
 
-    var file = File(arg)
+  # Separar inputs y flags
+  let inputs = args.filterIt(it.endsWith(".fcpp"))
+  var flags  = args.filterIt(not it.endsWith(".fcpp"))
 
-    file.read()
+  if inputs.len == 0:
+    quit("No se pasaron archivos .fcpp", QuitFailure)
 
-    file = File(
-        replaceExt(arg),
-        transpiler.transpileCode(file.content)
-    )
+  # Detectar -o<nombre>
+  var outName: string = "app"
+  for i, f in flags:
+    if f.startsWith("-o"):
+      if f.len > 2:
+        outName = f[2..^1]
+        flags.del(i)
+      break
 
-    file.write()
+  # Generar los archivos .cpp
+  for file in inputs:
+    if not fileExists(file):
+      quit("Archivo no existe: " & file, QuitFailure)
+
+    let src = readFile(file)
+    let cpp = transpile(src)
+
+    let name = file.extractFilename.changeFileExt("")
+    discard genCppFile(name, cpp)
+
+  # Compilar y linkear
+  compileAll(flags, outName)

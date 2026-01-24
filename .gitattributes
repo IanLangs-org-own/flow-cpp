@@ -1,15 +1,11 @@
+# Forzar LF en todos los archivos de texto
 * text=auto eol=lf
 
+# Ignorar archivos generados de tests
 tests/** linguist-vendored
-aux/**   linguist-vendored
 
-src/**/*.c    linguist-language=C
-src/**/*.h    linguist-language=C
-src/**/*.cpp  linguist-language=C++
-src/**/*.cc  linguist-language=C++
-src/**/*.hpp  linguist-language=C++
-src/**/*.hh  linguist-language=C++
+# Código Nim
+src/**/*.nim    linguist-language=Nim
 
-include/**/*.h    linguist-language=C
-include/**/*.hpp  linguist-language=C++
-include/**/*.hh  linguist-language=C++
+# Código C++ Flow (fcpp)
+tests/**/*.fcpp linguist-language=C++

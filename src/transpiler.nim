@@ -21,7 +21,7 @@ proc isEscaped(code: string, pos: int): bool =
 # Función principal
 # ------------------------
 
-proc transpileCode*(code: string): string =
+proc transpile*(code: string): string =
     var result = ""          # rename result to avoid shadowing
     var i = 0
     let n = code.len
