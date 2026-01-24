@@ -12,7 +12,7 @@ Opciones:
   -c<nombre>     Genera .cpp y compila a objeto .o, no linkea ni borra otros objetos
 
 Ejemplos:
-  ifc main.fcpp -O2 -o miApp        # flujo normal: compila y linkea a dist/miApp
+  ifc main.fcpp -O2 -omiApp        # flujo normal: compila y linkea a dist/miApp
   ifc test.fcpp -cppTest            # solo genera dist/cpp/Test.cpp
   ifc lib.fcpp -cLib                # genera dist/cpp/Lib.cpp y dist/obj/Lib.o
 """
@@ -29,7 +29,7 @@ when isMainModule:
     quit(0)
 
   if paramCount() == 1 and args[0] == "-v":
-    echo "ifc version 2.0\nflow c++ version 1.2"
+    echo "ifc version 2.3\nflow c++ version 1.4"
     quit(0)
     
   # --- Modo solo cpp: -cppX ---
@@ -58,10 +58,6 @@ when isMainModule:
       quit(0)
 
   # --- Flujo normal ---
-  if not dirExists(distDir):
-    createDir(distDir)
-
-  # Limpiar carpetas al inicio
   initDirs()
 
   # Separar inputs y flags
@@ -80,7 +76,8 @@ when isMainModule:
         flags.del(i)
       break
 
-  # Generar los archivos .cpp
+  # Generar los archivos .cpp y recolectar los que se compilarán
+  var cppToCompile: seq[string] = @[]
   for file in inputs:
     if not fileExists(file):
       quit("Archivo no existe: " & file, QuitFailure)
@@ -89,7 +86,8 @@ when isMainModule:
     let cpp = transpile(src)
 
     let name = file.extractFilename.changeFileExt("")
-    discard genCppFile(name, cpp)
+    let cppPath = genCppFile(name, cpp)
+    cppToCompile.add(cppPath)
 
-  # Compilar y linkear
-  compileAll(flags, outName)
+  # Compilar y linkear solo esos
+  compileAll(flags, cppToCompile, outName)

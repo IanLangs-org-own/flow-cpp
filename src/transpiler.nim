@@ -1,12 +1,15 @@
-import strutils
+import strutils, tables
 
 # ------------------------
 # Funciones auxiliares
 # ------------------------
 
 # Verifica si un caracter puede ser parte de un identificador
-proc isIdent(c: char): bool =
+func isIdent(c: char): bool =
     (c >= '0' and c <= '9') or (c >= 'A' and c <= 'Z') or (c >= 'a' and c <= 'z') or c == '_'
+
+func isOperator(c: char): bool =
+    c in @['+','-','<','>','*','/', '=', '!', '&', '|']
 
 # Comprueba si la posición 'pos' está escapada dentro de un string/char
 proc isEscaped(code: string, pos: int): bool =
@@ -81,7 +84,9 @@ proc transpile*(code: string): string =
                     if k < n and code[k] == ':':
                         let isVerify = k + 1 < n and code[k + 1] == '?'
                         let expr = if j-2 >= i+1: code[i+1 .. j-2] else: ""
-                        let typ  = if k-1 >= typeStart: code[typeStart .. k-1] else: ""
+                        var vartyp  = if k-1 >= typeStart: code[typeStart .. k-1] else: ""
+                        let typeMap = toTable([("str", "std::string"), ("any", "std::any")])
+                        let typ = typeMap.getOrDefault(vartyp, vartyp)
                         if isVerify:
                             result.add(expr & ".type() == typeid(" & typ & ")")
                             i = k + 2
@@ -96,7 +101,7 @@ proc transpile*(code: string): string =
                 let prev = if i > 0: code[i-1] else: '\0'
                 let nextc = if i+3 < n: code[i+3] else: '\0'
                 let inOtherScope = i >= 2 and code.substr(i-2, i-1) == "::"
-                if not isIdent(prev) and not isIdent(nextc) and not inOtherScope:
+                if not isIdent(prev) and not isIdent(nextc) and not inOtherScope or isOperator(prev) and isOperator(nextc):
                     result.add "std::any"
                     anyInCode = true
                     i += 3
@@ -106,7 +111,7 @@ proc transpile*(code: string): string =
                 let prev = if i > 0: code[i-1] else: '\0'
                 let nextc = if i+3 < n: code[i+3] else: '\0'
                 let inOtherScope = i >= 2 and code.substr(i-2, i-1) == "::"
-                if not isIdent(prev) and not isIdent(nextc) and not inOtherScope:
+                if not isIdent(prev) and not isIdent(nextc) and not inOtherScope or isOperator(prev) and isOperator(nextc):
                     result.add "std::string"
                     strInCode = true
                     i += 3
@@ -116,7 +121,7 @@ proc transpile*(code: string): string =
                 let prev = if i > 0: code[i-1] else: '\0'
                 let nextc = if i+3 < n: code[i+3] else: '\0'
                 let inOtherScope = i >= 2 and code.substr(i-2, i-1) == "::"
-                if not isIdent(prev) and not isIdent(nextc) and not inOtherScope:
+                if not isIdent(prev) and not isIdent(nextc) and not inOtherScope or isOperator(prev) and isOperator(nextc):
                     result.add "extern \"C\""
                     i += 3
                     continue

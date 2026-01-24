@@ -2,61 +2,35 @@ import os, osproc, strutils, sequtils
 import gen_files
 
 # ------------------------
-# Archivos .cpp encontrados
+# Compilar solo los cpp que le pases
 # ------------------------
-var cppFiles: seq[string] = @[]
-
-# ------------------------
-# Crear directorios si no existen
-# ------------------------
-proc createDirs() =
-  for path in @[cacheDir, objDir, distDir]:
-    if not dirExists(path):
-      createDir(path)
-
-# ------------------------
-# Verificar que haya .cpp generados
-# ------------------------
-proc verify() =
-  cppFiles = toSeq(walkFiles(cacheDir / "*.cpp"))
-  if cppFiles.len == 0:
-    quit("No hay archivos .cpp en dist/cpp/", QuitFailure)
-
-# ------------------------
-# Compilar cada .cpp a .o
-# ------------------------
-proc compileObjs(flags: seq[string]) =
-  for cpp in cppFiles:
-    let objPath = objDir / cpp.extractFilename.changeFileExt(".o")
+proc compileObjs(flags: seq[string], cppFilesToCompile: seq[string]): seq[string] =
+  var objs: seq[string] = @[]
+  for cpp in cppFilesToCompile:
+    let name = cpp.extractFilename.changeFileExt("")
+    let objPath = objDir / (name & ".o")
     let cmd = @["g++", "-c", cpp, "-o", objPath] & flags
     let res = execCmd(cmd.join(" "))
     if res != 0:
       quit("Error compilando " & cpp, QuitFailure)
+    objs.add(objPath)  # recolectamos solo los objetos de esta compilación
+  return objs
 
 # ------------------------
-# Linkear todos los objetos a un solo binario
+# Linkear solo los objetos dados
 # ------------------------
-proc linkObjs(outName: string) =
-  let objs = toSeq(walkFiles(objDir / "*.o"))
+proc linkObjs(outName: string, objs: seq[string]) =
   if objs.len == 0:
-    quit("No hay archivos .o para linkear", QuitFailure)
+    quit("No hay objetos para linkear", QuitFailure)
   let linkCmd = @["g++"] & objs & @["-o", distDir / outName]
   let res = execCmd(linkCmd.join(" "))
   if res != 0:
     quit("Error linkeando", QuitFailure)
 
 # ------------------------
-# Función principal: compilar todo
+# Función principal: compilar solo los archivos pasados y linkear solo sus objetos
 # ------------------------
-proc compileAll*(flags: seq[string], outName: string = "app") =
-  # Crear carpetas si no existen
-  createDirs()
-
-  # Verificar que hay cpp para compilar
-  verify()
-
-  # Compilar todos los cpp a objetos
-  compileObjs(flags)
-
-  # Linkear los objetos a un binario
-  linkObjs(outName)
+proc compileAll*(flags: seq[string], cppFilesToCompile: seq[string], outName: string = "app") =
+  initDirs()
+  let objs = compileObjs(flags, cppFilesToCompile)
+  linkObjs(outName, objs)

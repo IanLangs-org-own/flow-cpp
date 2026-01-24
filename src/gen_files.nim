@@ -9,39 +9,19 @@ const
   objDir*   = "dist/obj"
 
 # ------------------------
-# Funciones de limpieza
-# ------------------------
-proc removeDirRec(path: string) =
-  if not dirExists(path):
-    return
-
-  for entry in walkDir(path):
-    let fullPath = joinPath(path, entry.path)
-    if entry.kind == pcFile:
-      removeFile(fullPath)
-    elif entry.kind == pcDir:
-      removeDirRec(fullPath)
-
-  removeDir(path) # borra la carpeta vacía
-
-# ------------------------
-# Crear carpeta limpia
-# ------------------------
-proc recreateDir(path: string) =
-  if dirExists(path): removeDirRec(path)
-  createDir(path)
-
-# ------------------------
-# Inicialización de directorios (limpio)
+# Crear carpeta si no existe
 # ------------------------
 proc initDirs*() =
-  for path in @[cacheDir, objDir]:
-    recreateDir(path)
+  for path in @[cacheDir, objDir, distDir]:
+    if not dirExists(path):
+      createDir(path)
 
 # ------------------------
-# Generar archivo .cpp
+# Generar archivo .cpp solo si no existe
 # ------------------------
 proc genCppFile*(name, code: string): string =
   let path = cacheDir / (name & ".cpp")
-  writeFile(path, code)
+  # Si ya existe, no sobrescribe
+  if not fileExists(path):
+    writeFile(path, code)
   return path
