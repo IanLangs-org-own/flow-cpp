@@ -1,5 +1,5 @@
 # Ignorar carpetas de compilación y binarios
-/ifc               # si el ejecutable se genera localmente
+.no_github/
 
 # Archivos temporales y de logs
 *.log

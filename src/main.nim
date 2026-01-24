@@ -31,6 +31,7 @@ when isMainModule:
   if paramCount() == 1 and args[0] == "-v":
     echo "ifc version 2.0\nflow c++ version 1.2"
     quit(0)
+    
   # --- Modo solo cpp: -cppX ---
   if paramCount() == 2 and args[1].startsWith("-cpp"):
     let f = args[1]
