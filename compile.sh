@@ -2,4 +2,4 @@
 
 set -e
 
-nim c -o:ifc ./src/main.nim
+nim c -o:no_github/ifc ./src/main.nim
