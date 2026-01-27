@@ -26,12 +26,11 @@ proc isEscaped(code: string, pos: int): bool =
 # ------------------------
 
 proc transpile*(code: string): string =
-  var `out` = ""
+  var cppCode = ""
   var i = 0
   let n = code.len
 
-  var anyInCode = false
-  var strInCode = false
+  var flowInCode = false
 
   var inString = false
   var inChar = false
@@ -56,9 +55,13 @@ proc transpile*(code: string): string =
     if inInclude and c == '\n': inInclude = false
     if inLineComment and c == '\n': inLineComment = false
 
-    if inBlockComment and c == '*' and next == '/':
-      inBlockComment = false
-      i += 2
+    if inBlockComment:
+      cppCode.add(c)
+      if c == '*' and next == '/':
+        cppCode.add(next)       # agregamos la barra final del cierre
+        inBlockComment = false
+        inc(i)                  # saltamos el next ya copiado
+      inc(i)
       continue
 
     if not (inString or inChar or inLineComment or inBlockComment):
@@ -105,13 +108,13 @@ proc transpile*(code: string): string =
             let typ = typeMap.getOrDefault(rawType, rawType)
 
             if isVerify:
-              `out`.add(expr & ".type() == typeid(" & typ & ")")
+              cppCode.add(expr & ".type() == typeid(" & typ & ")")
               i = k + 2
             else:
-              `out`.add("std::any_cast<" & typ & ">(" & expr & ")")
+              cppCode.add("flow::any_cast<" & typ & ">(" & expr & ")")
               i = k + 1
 
-            anyInCode = true
+            flowInCode = true
             continue
 
       # any
@@ -120,8 +123,8 @@ proc transpile*(code: string): string =
         let nextc = if i+3 < n: code[i+3] else: '\0'
         let scoped = i >= 2 and code.substr(i-2, i-1) == "::"
         if not isIdent(prev) and not isIdent(nextc) and not scoped:
-          `out`.add("std::any")
-          anyInCode = true
+          cppCode.add("flow::any")
+          flowInCode = true
           i += 3
           continue
 
@@ -131,8 +134,18 @@ proc transpile*(code: string): string =
         let nextc = if i+3 < n: code[i+3] else: '\0'
         let scoped = i >= 2 and code.substr(i-2, i-1) == "::"
         if not isIdent(prev) and not isIdent(nextc) and not scoped:
-          `out`.add("std::string")
-          strInCode = true
+          cppCode.add("flow::str")
+          flowInCode = true
+          i += 3
+          continue
+      
+      if code.substr(i, min(i+3, n-1)) == "wstr":
+        let prev = if i > 0: code[i-1] else: '\0'
+        let nextc = if i+4 < n: code[i+3] else: '\0'
+        let scoped = i >= 2 and code.substr(i-2, i-1) == "::"
+        if not isIdent(prev) and not isIdent(nextc) and not scoped:
+          cppCode.add("flow::wstr")
+          flowInCode = true
           i += 3
           continue
 
@@ -141,7 +154,7 @@ proc transpile*(code: string): string =
         let prev = if i > 0: code[i-1] else: '\0'
         let nextc = if i+3 < n: code[i+3] else: '\0'
         if not isIdent(prev) and not isIdent(nextc):
-          `out`.add("extern \"C\"")
+          cppCode.add("extern \"C\"")
           i += 3
           continue
 
@@ -150,7 +163,7 @@ proc transpile*(code: string): string =
         let prev = if i > 0: code[i-1] else: '\0'
         let nextc = if i+5 < n: code[i+5] else: '\0'
         if not isIdent(prev) and not isIdent(nextc):
-          `out`.add("while (!")
+          cppCode.add("while (!")
           pendingClose.inc
           i += 5
           continue
@@ -160,7 +173,7 @@ proc transpile*(code: string): string =
         let prev = if i > 0: code[i-1] else: '\0'
         let nextc = if i+6 < n: code[i+6] else: '\0'
         if not isIdent(prev) and not isIdent(nextc):
-          `out`.add("if (!")
+          cppCode.add("if (!")
           pendingClose.inc
           i += 6
           continue
@@ -170,19 +183,17 @@ proc transpile*(code: string): string =
     # ----------------------
     if pendingClose > 0 and c == ')':
       pendingClose.dec
-      `out`.add("))")
+      cppCode.add("))")
       inc(i)
       continue
 
-    `out`.add(c)
+    cppCode.add(c)
     inc(i)
 
   # ----------------------
   # Includes automáticos
   # ----------------------
-  if anyInCode and not `out`.contains("#include <any>"):
-    `out` = "#include <any>\n" & `out`
-  if strInCode and not `out`.contains("#include <string>"):
-    `out` = "#include <string>\n" & `out`
+  if flowInCode and not cppCode.contains("#include <flow/types>"):
+    cppCode = "#include <flow/types>\n" & cppCode
 
-  return `out`
+  return cppCode

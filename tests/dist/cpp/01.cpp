@@ -1,9 +1,8 @@
-#include <any>
-#include <string>
+#include <flow/types>
 int main() {
-    std::any x = 1;
-    auto y = std::any_cast<long long>(x);
-    std::string z = "any many";
-    std::string many = "";
+    flow::any x = 1;
+    auto y = flow::any_cast<long long>(x);
+    flow::str z = "any many";
+    flow::str many = "";
     return 0;
 }
