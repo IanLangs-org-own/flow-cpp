@@ -21,7 +21,5 @@ proc initDirs*() =
 # ------------------------
 proc genCppFile*(name, code: string): string =
   let path = cacheDir / (name & ".cpp")
-  # Si ya existe, no sobrescribe
-  if not fileExists(path):
-    writeFile(path, code)
+  writeFile(path, code)
   return path
