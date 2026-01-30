@@ -1,4 +1,4 @@
-import os, osproc, strutils, sequtils
+import os, osproc, strutils
 import gen_files
 
 # ------------------------

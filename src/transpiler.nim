@@ -21,19 +21,62 @@ proc isEscaped(code: string, pos: int): bool =
     dec p
   (count mod 2) == 1
 
+proc delete_comments(code: string): string =
+  var inLineComment = false
+  var inBlockComment = false
+  var inChar = false
+  var inString = false
+  var resultCode = newStringOfCap(code.len()) # más eficiente
+  var i = 0
+  while i < code.len():
+    let c = code[i]
+    let next = if i + 1 < code.len(): code[i+1] else: '\0'
+
+    # fin de comentarios de línea
+    if inLineComment:
+      if c == '\n': inLineComment = false
+      inc i
+      continue
+
+    # fin de comentarios de bloque
+    if inBlockComment:
+      if c == '*' and next == '/':
+        inc i
+        inBlockComment = false
+      inc i
+      continue
+
+    # iniciar comentarios
+    if not (inChar or inString):
+      if c == '/' and next == '/': inLineComment = true
+      elif c == '/' and next == '*': inBlockComment = true
+
+    # toggle de strings/chars
+    if c == '"' and not inChar and not isEscaped(code, i):
+      inString = not inString
+    elif c == '\'' and not inString and not isEscaped(code, i):
+      inChar = not inChar
+
+    # agregar solo si no estamos en comentario
+    if not inLineComment and not inBlockComment:
+      resultCode.add c
+    inc i
+
+  return resultCode
+
+
 # ---------------------------------
 # Transpiler principal
 # ---------------------------------
 
-proc transpile*(code: string): string =
+proc transpile*(RawCode: string): string =
+  var code = delete_comments(RawCode)
   var cppCode = ""
   var i = 0
   let n = code.len()
 
   var inString = false
   var inChar = false
-  var inLineComment = false
-  var inBlockComment = false
   var inInclude = false
 
   var flowUsed = false
@@ -52,30 +95,6 @@ proc transpile*(code: string): string =
     let next = if i + 1 < n: code[i + 1] else: '\0'
 
     # ------------------------------
-    # Comentarios
-    # ------------------------------
-    if inLineComment:
-      cppCode.add c
-      if c == '\n': inLineComment = false
-      inc i
-      continue
-
-    if inBlockComment:
-      cppCode.add c
-      if c == '*' and next == '/':
-        cppCode.add '/'
-        inc i
-        inBlockComment = false
-      inc i
-      continue
-
-    if not (inString or inChar):
-      if c == '/' and next == '/':
-        inLineComment = true
-      elif c == '/' and next == '*':
-        inBlockComment = true
-
-    # ------------------------------
     # Strings / chars
     # ------------------------------
     if c == '"' and not inChar and not isEscaped(code, i):
@@ -86,7 +105,7 @@ proc transpile*(code: string): string =
     # ------------------------------
     # Includes
     # ------------------------------
-    if not (inString or inChar or inBlockComment or inLineComment):
+    if not (inString or inChar):
       if code.substr(i, min(i+7, n-1)) == "#include":
         inInclude = true
     if inInclude and c == '\n':
@@ -95,7 +114,7 @@ proc transpile*(code: string): string =
     # ------------------------------
     # Flow transforms
     # ------------------------------
-    if not (inString or inChar or inLineComment or inBlockComment or inInclude):
+    if not (inString or inChar or inInclude):
 
       # [expr]:Type: / ?
       if c == '[':

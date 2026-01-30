@@ -1,4 +1,4 @@
-import os, strutils, sequtils
+import os
 
 # ------------------------
 # Configuración de rutas
