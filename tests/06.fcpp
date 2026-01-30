@@ -1,0 +1,10 @@
+#include <flow/io>
+
+#defer strCopy str
+
+int main() {
+    strCopy obj;
+    obj.value = "hola mundo";
+    flow::println(obj.value);
+    return 0;
+}

@@ -29,7 +29,7 @@ when isMainModule:
     quit(0)
 
   if paramCount() == 1 and args[0] == "-v":
-    echo "ifc version 2.7\nflow c++ version 2.6"
+    echo "ifc version 3.0\nflow c++ version 3.0"
     quit(0)
     
   # --- Modo solo cpp: -cppX ---
