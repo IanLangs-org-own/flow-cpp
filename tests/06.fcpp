@@ -4,7 +4,7 @@
 int main()  {
 	flow::File* f = nullptr;
 
-	flow::Defer fDEFER = defer delete f;
+	flow::Defer fDEFER = defer delete f;;
 	
 	str Fname = flow::input("introduce archivo: ");
 	

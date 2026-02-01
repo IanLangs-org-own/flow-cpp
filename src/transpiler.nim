@@ -225,14 +225,14 @@ proc transpile*(RawCode: string): string =
               break
 
           for k in exprBegin.. n:
-            if code[k] == ';': 
+            if code[k] == ';':
               existExprEnd = true
               exprEnd = k
               break
 
           if existExprBegin and existExprEnd:
             cppCode.add "flow::Defer([&](){" & code[exprBegin.. exprEnd] & "})"
-            i = exprEnd
+            i = exprEnd + 1
           else:
             cppCode.add "flow::Defer()"
           continue
