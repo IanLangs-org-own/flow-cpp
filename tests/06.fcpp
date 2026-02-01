@@ -1,10 +1,18 @@
+
+#include <flow/fs>
 #include <flow/io>
+int main()  {
+	flow::File* f = nullptr;
 
-#defer strCopy str
+	flow::Defer fDEFER = defer delete f;
+	
+	str Fname = flow::input("introduce archivo: ");
+	
+	str Fcont = flow::input("introduce nueva linea: ");
 
-int main() {
-    strCopy obj;
-    obj.value = "hola mundo";
-    flow::println(obj.value);
-    return 0;
+	f = new flow::File(Fname);
+
+	f->append(Fcont.ends_with('\n') ? Fcont : Fcont + "\n");
+
+	return 0;
 }

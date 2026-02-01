@@ -9,7 +9,7 @@ proc compileObjs(flags: seq[string], cppFilesToCompile: seq[string]): seq[string
   for cpp in cppFilesToCompile:
     let name = cpp.extractFilename.changeFileExt("")
     let objPath = objDir / (name & ".o")
-    let cmd = @["g++", "-c", cpp, "-o", objPath] & flags
+    let cmd = @["g++", "-c", "-std=c++20", cpp, "-o", objPath] & flags
     let res = execCmd(cmd.join(" "))
     if res != 0:
       quit("Error compilando " & cpp, QuitFailure)

@@ -1,5 +1,4 @@
 import strutils, tables
-
 # ---------------------------------
 # Utilidades léxicas
 # ---------------------------------
@@ -67,76 +66,12 @@ proc delete_comments(code: string): string =
 
   return resultCode
 
-
-proc parse_defer(code: string): string =
-  var inString = false
-  var inChar = false
-  var braceDepth = 0
-
-  var resultCode = newStringOfCap(code.len)
-  var i = 0
-  let n = code.len
-
-  while i < n:
-    let c = code[i]
-
-    # toggle strings / chars
-    if c == '"' and not inChar and not isEscaped(code, i):
-      inString = not inString
-    elif c == '\'' and not inString and not isEscaped(code, i):
-      inChar = not inChar
-
-    # track scope
-    if not (inString or inChar):
-      if c == '{': inc braceDepth
-      elif c == '}': dec braceDepth
-
-    # detectar #defer SOLO en global
-    if not (inString or inChar):
-      if braceDepth == 0 and
-         (i == 0 or code[i-1] == '\n') and
-         code.substr(i, min(i+5, n-1)) == "#defer":
-
-        var j = i + 6
-        while j < n and code[j].isSpace: inc j
-
-        let nameStart = j
-        while j < n and not code[j].isSpace: inc j
-        let typeName = code[nameStart .. j-1]
-
-        while j < n and code[j].isSpace: inc j
-
-        let baseStart = j
-        while j < n and code[j] notin {'\n', ';'}: inc j
-        let baseType = code[baseStart .. j-1].strip
-
-        if typeName.len == 0 or baseType.len == 0:
-          raise newException(ValueError, "Invalid #defer syntax")
-
-        resultCode.add(
-          "typedef struct { " & baseType & " value; } " & typeName & ";\n"
-        )
-
-        i = j
-        continue
-
-      elif code.substr(i, min(i+5, n-1)) == "#defer":
-        raise newException(ValueError, "#defer only allowed in global scope")
-
-    resultCode.add c
-    inc i
-
-  resultCode
-
-
-
 # ---------------------------------
 # Transpiler principal
 # ---------------------------------
 
 proc transpile*(RawCode: string): string =
   var code = delete_comments(RawCode)
-  code = parse_defer(code)
   var cppCode = ""
   var i = 0
   let n = code.len()
@@ -152,8 +87,9 @@ proc transpile*(RawCode: string): string =
   var parenDepth = 0
 
   let typeMap = {
-    "str": "std::string",
-    "any": "std::any"
+    "str": "flow::str",
+    "wstr": "flow::wstr",
+    "any": "flow::any"
   }.toTable
 
   while i < n:
@@ -269,6 +205,39 @@ proc transpile*(RawCode: string): string =
           cppCode.add "extern \"C\""
           i += 3
           continue
+      
+      #defer
+      if code.substr(i, min(i+4, n-1)) == "defer":
+        let prev = if i > 0: code[i-1] else: '\0'
+        let nextc =  if i+5 < n: code[i+5] else: '\0'
+
+        if isBoundary(prev, nextc):
+          var exprBegin = i+6
+          var existExprBegin = false
+
+          var exprEnd = i+6
+          var existExprEnd = false
+
+          for k in i+6.. n:
+            if not (code[k] in [' ', '\n', '\t']):
+              existExprBegin = true
+              exprBegin = k
+              break
+
+          for k in exprBegin.. n:
+            if code[k] == ';': 
+              existExprEnd = true
+              exprEnd = k
+              break
+
+          if existExprBegin and existExprEnd:
+            cppCode.add "flow::Defer([&](){" & code[exprBegin.. exprEnd] & "})"
+            i = exprEnd
+          else:
+            cppCode.add "flow::Defer()"
+          continue
+
+
 
     # ------------------------------
     # Paréntesis
